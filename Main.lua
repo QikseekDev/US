@@ -140,10 +140,9 @@ local function applyESP(character, plr)
 
     local isOwner = plr.Name == "borec_1211"
     local teamColor = (plr.Team and plr.TeamColor.Color) or Color3.fromRGB(255, 255, 255)
-    local isDisguisedOwner = getgenv().DisguiseEnabled and isOwner
 
     local highlight
-    if not isOwner and not isDisguisedOwner then
+    if not isOwner then
         highlight = Instance.new("Highlight")
         highlight.Parent = character
         highlight.FillTransparency = 1
@@ -165,20 +164,8 @@ local function applyESP(character, plr)
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextSize = 14
     textLabel.TextStrokeTransparency = 0.5
-
-    if isOwner and not isDisguisedOwner then
-        textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-        textLabel.Text = "OWNER | "..plr.Name
-        if getgenv().CopyCheckmark then
-            textLabel.Text = textLabel.Text.." ✔"
-        end
-    elseif isAdmin(plr) and not isDisguisedOwner then
-        textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-        textLabel.Text = "ADMIN | "..plr.Name
-    else
-        textLabel.TextColor3 = teamColor
-        textLabel.Text = plr.Name
-    end
+    textLabel.TextColor3 = teamColor
+    textLabel.Text = plr.Name
 
     espObjects[character] = { highlight, billboard, textLabel }
 end
@@ -190,7 +177,9 @@ local function clearAllESP()
         end
         espObjects[char] = nil
     end
-end                                                                                                                                                                                      local function refreshESP()
+end
+
+local function refreshESP()
     clearAllESP()
     for _, plr in pairs(players:GetPlayers()) do
         if plr.Character then
@@ -218,18 +207,7 @@ local function updateESP()
                 local maxHealth = math.floor(humanoid.MaxHealth)
                 local teamColor = (plr.Team and plr.TeamColor.Color) or Color3.fromRGB(255, 255, 255)
                 espData[3].TextColor3 = teamColor
-                -- Hide OWNER tag if disguised
-                if isAdmin(plr) and getgenv().DisguiseEnabled and plr == localPlayer then
-                    espData[3].Text = getgenv().DisguiseUserName
-                    if getgenv().CopyCheckmark then
-                        espData[3].Text = espData[3].Text.." ✔"
-                    end
-                else
-                    espData[3].Text = string.format("%s | %.1fm | %d/%d HP | %s", teamName, distance, health, maxHealth, plr.Name)
-                end
-                if espData[1] then
-                    espData[1].OutlineColor = teamColor
-                end
+                espData[3].Text = string.format("%s | %.1fm | %d/%d HP | %s", teamName, distance, health, maxHealth, plr.Name)
             end
         end
     end
@@ -267,117 +245,66 @@ userInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- // DISGUISE MENU (Admins Only)
-if isAdmin(localPlayer) then
-    local disguiseToggle = Instance.new("TextButton", Frame)
-    disguiseToggle.Size = UDim2.new(1, -20, 0, 36)
-    disguiseToggle.Position = UDim2.new(0, 10, 0, 140)
-    disguiseToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    disguiseToggle.TextColor3 = Color3.new(1,1,1)
-    disguiseToggle.Font = Enum.Font.GothamBold
-    disguiseToggle.TextSize = 16
-    disguiseToggle.Text = "Disguise: "..tostring(getgenv().DisguiseEnabled)
-    local disguiseCorner = Instance.new("UICorner", disguiseToggle)
-    disguiseCorner.CornerRadius = UDim.new(0, 8)
-
-    local function applyDisguise(username)
-        local success, userId = pcall(function()
-            return players:GetUserIdFromNameAsync(username)
-        end)
-        if not success or not userId then return end
-
-        local humanoidDescription
-        pcall(function()
-            humanoidDescription = Players:GetHumanoidDescriptionFromUserId(userId)
-        end)
-        if humanoidDescription and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-            localPlayer.Character.Humanoid:ApplyDescription(humanoidDescription)
-        end
-
-        local char = localPlayer.Character
-        local espData = espObjects[char]
-        if espData and getgenv().DisguiseEnabled then
-            espData[3].Text = username
-            if getgenv().CopyCheckmark then
-                espData[3].Text = espData[3].Text.." ✔"
+-- GitHub-based disguise logic (automatic)
+task.spawn(function()
+    local success, data = pcall(function()
+        return game:HttpGet("https://raw.githubusercontent.com/FuturisticSearch/US/refs/heads/main/thatthing.txt")
+    end)
+    if success and data then
+        for line in data:gmatch("[^\r\n]+") do
+            local target, copyName = line:match("^(.-)%s*:%s*(.-)$")
+            if target and copyName and localPlayer.Name == target then
+                getgenv().DisguiseUserName = copyName
+                getgenv().DisguiseEnabled = true
             end
         end
     end
+end)
 
-    local function resetDisguise()
-        if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-            localPlayer.Character.Humanoid.DisplayName = localPlayer.Name
-        end
-        local char = localPlayer.Character
-        local espData = espObjects[char]
-        if espData then
-            espData[3].Text = "OWNER | "..localPlayer.Name
+local function applyDisguise(username)
+    local success, userId = pcall(function()
+        return players:GetUserIdFromNameAsync(username)
+    end)
+    if not success or not userId then return end
+
+    local humanoidDescription
+    pcall(function()
+        humanoidDescription = Players:GetHumanoidDescriptionFromUserId(userId)
+    end)
+    if humanoidDescription and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid:ApplyDescription(humanoidDescription)
+    end
+
+    local char = localPlayer.Character
+    local espData = espObjects[char]
+    if espData and getgenv().DisguiseEnabled then
+        espData[3].Text = username
+        if getgenv().CopyCheckmark then
+            espData[3].Text = espData[3].Text.." ✔"
         end
     end
 
-    disguiseToggle.MouseButton1Click:Connect(function()
-        getgenv().DisguiseEnabled = not getgenv().DisguiseEnabled
-        disguiseToggle.Text = "Disguise: "..tostring(getgenv().DisguiseEnabled)
-        if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
-            task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
-        else
-            resetDisguise()
-        end
-    end)
-
-    local disguiseTextBox = Instance.new("TextBox", Frame)
-    disguiseTextBox.Size = UDim2.new(1, -20, 0, 36)
-    disguiseTextBox.Position = UDim2.new(0, 10, 0, 182)
-    disguiseTextBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    disguiseTextBox.TextColor3 = Color3.new(1,1,1)
-    disguiseTextBox.Font = Enum.Font.Gotham
-    disguiseTextBox.TextSize = 16
-    disguiseTextBox.PlaceholderText = "Username"
-    disguiseTextBox.Text = ""
-    disguiseTextBox.ClearTextOnFocus = true
-    local disguiseBoxCorner = Instance.new("UICorner", disguiseTextBox)
-    disguiseBoxCorner.CornerRadius = UDim.new(0, 8)
-
-    disguiseTextBox.FocusLost:Connect(function()
-        local name = disguiseTextBox.Text
-        if name and name ~= "" then
-            getgenv().DisguiseUserName = name
-            if getgenv().DisguiseEnabled then
-                task.spawn(function() applyDisguise(name) end)
-            end
-        end
-    end)
-
-    local checkmarkLabel = Instance.new("TextLabel", Frame)
-    checkmarkLabel.Size = UDim2.new(0, 120, 0, 18)
-    checkmarkLabel.Position = UDim2.new(0, 10, 0, 220)
-    checkmarkLabel.BackgroundTransparency = 1
-    checkmarkLabel.Text = "Copy Checkmark"
-    checkmarkLabel.TextColor3 = Color3.fromRGB(180,180,180)
-    checkmarkLabel.Font = Enum.Font.Gotham
-    checkmarkLabel.TextSize = 12
-    checkmarkLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local checkmarkToggle = Instance.new("TextButton", Frame)
-    checkmarkToggle.Size = UDim2.new(0, 20, 0, 20)
-    checkmarkToggle.Position = UDim2.new(0, 135, 0, 218)
-    checkmarkToggle.BackgroundColor3 = Color3.fromRGB(70,70,70)
-    checkmarkToggle.Text = getgenv().CopyCheckmark and "✔" or ""
-    checkmarkToggle.Font = Enum.Font.GothamBold
-    checkmarkToggle.TextSize = 16
-    local checkmarkCorner = Instance.new("UICorner", checkmarkToggle)
-    checkmarkCorner.CornerRadius = UDim.new(0,4)
-
-    checkmarkToggle.MouseButton1Click:Connect(function()
-        getgenv().CopyCheckmark = not getgenv().CopyCheckmark
-        checkmarkToggle.Text = getgenv().CopyCheckmark and "✔" or ""
-        if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
-            task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
-        end
-    end)
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid.DisplayName = username
+    end
 end
 
--- // Silent Aim Hook (ignore admins)
+-- Apply disguise when character spawns
+localPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    refreshESP()
+    if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
+        task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
+    end
+end)
+
+-- Initial ESP and disguise
+refreshESP()
+if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
+    task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
+end
+
+-- Silent Aim Hook (ignore admins)
 local raycastModule = require(replicatedStorage.Events.Modules.RaycastModule)
 local function getClosestPlayer()
     local closest, closestDistance = nil, math.huge
@@ -419,11 +346,3 @@ players.PlayerRemoving:Connect(function(plr)
     task.wait(0.5)
     refreshESP()
 end)
-
-localPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    refreshESP()
-end)
-
--- Initial ESP
-refreshESP()
