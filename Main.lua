@@ -11,7 +11,7 @@ local currentCamera = workspace.CurrentCamera
 
 -- Admin / Owner list
 local Admins = {
-    ["slbattlesgodd"] = true,
+    ["1x1x1x1sReturnCame"] = true,
 }
 
 local function isAdmin(plr)
