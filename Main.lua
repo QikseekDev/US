@@ -1,8 +1,5 @@
 getgenv().FOV = 100
 getgenv().Enabled = false
-getgenv().DisguiseEnabled = false
-getgenv().DisguiseUserName = ""
-getgenv().CopyCheckmark = true
 
 local players = game:GetService("Players")
 local replicatedStorage = game:GetService("ReplicatedStorage")
@@ -39,9 +36,6 @@ end)
 
 -- GUI
 local frameHeight = 150
-if isAdmin(localPlayer) then
-    frameHeight = 150 -- No extra buttons needed because auto-fetch disguise
-end
 
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "SilentAim_ESP_UI"
@@ -70,6 +64,7 @@ Toggle.TextColor3 = Color3.new(1,1,1)
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 16
 Toggle.Text = "SilentAim: "..tostring(getgenv().Enabled)
+
 local ToggleCorner = Instance.new("UICorner", Toggle)
 ToggleCorner.CornerRadius = UDim.new(0, 8)
 
@@ -89,6 +84,7 @@ TextBox.TextSize = 16
 TextBox.PlaceholderText = "100"
 TextBox.Text = ""
 TextBox.ClearTextOnFocus = true
+
 local BoxCorner = Instance.new("UICorner", TextBox)
 BoxCorner.CornerRadius = UDim.new(0, 8)
 
@@ -115,6 +111,7 @@ espButton.TextColor3 = Color3.new(1,1,1)
 espButton.Font = Enum.Font.GothamBold
 espButton.TextSize = 16
 espButton.Text = "ESP: false"
+
 local espCorner = Instance.new("UICorner", espButton)
 espCorner.CornerRadius = UDim.new(0, 8)
 
@@ -199,18 +196,21 @@ end
 local function updateESP()
     if not espEnabled then return end
     if not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+
     for _, plr in pairs(players:GetPlayers()) do
         if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local char = plr.Character
             local rootPart = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChild("Humanoid")
             local espData = espObjects[char]
+
             if rootPart and humanoid and espData then
                 local distance = (rootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
                 local teamName = plr.Team and plr.Team.Name or "No Team"
                 local health = math.floor(humanoid.Health)
                 local maxHealth = math.floor(humanoid.MaxHealth)
                 local teamColor = (plr.Team and plr.TeamColor.Color) or Color3.fromRGB(255, 255, 255)
+
                 espData[3].TextColor3 = teamColor
                 espData[3].Text = string.format("%s | %.1fm | %d/%d HP | %s", teamName, distance, health, maxHealth, plr.Name)
             end
@@ -250,83 +250,34 @@ userInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- GitHub-based disguise logic (automatic)
-task.spawn(function()
-    local success, data = pcall(function()
-        return game:HttpGet("https://raw.githubusercontent.com/FuturisticSearch/US/refs/heads/main/thatthing.txt")
-    end)
-    if success and data then
-        for line in data:gmatch("[^\r\n]+") do
-            local target, copyName = line:match("^(.-)%s*:%s*(.-)$")
-            if target and copyName and localPlayer.Name == target then
-                getgenv().DisguiseUserName = copyName
-                getgenv().DisguiseEnabled = true
-            end
-        end
-    end
-end)
-
-local function applyDisguise(username)
-    local success, userId = pcall(function()
-        return players:GetUserIdFromNameAsync(username)
-    end)
-    if not success or not userId then return end
-
-    local humanoidDescription
-    pcall(function()
-        humanoidDescription = Players:GetHumanoidDescriptionFromUserId(userId)
-    end)
-    if humanoidDescription and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-        localPlayer.Character.Humanoid:ApplyDescription(humanoidDescription)
-    end
-
-    local char = localPlayer.Character
-    local espData = espObjects[char]
-    if espData and getgenv().DisguiseEnabled then
-        espData[3].Text = username
-        if getgenv().CopyCheckmark then
-            espData[3].Text = espData[3].Text.." ✔"
-        end
-    end
-
-    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-        localPlayer.Character.Humanoid.DisplayName = username
-    end
-end
-
--- Apply disguise when character spawns
-localPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
-        task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
-    end
-    refreshESP()
-end)
-
--- Initial ESP and disguise
-refreshESP()
-if getgenv().DisguiseEnabled and getgenv().DisguiseUserName ~= "" then
-    task.spawn(function() applyDisguise(getgenv().DisguiseUserName) end)
-end
-
 -- Silent Aim Hook (ignore admins)
 local raycastModule = require(replicatedStorage.Events.Modules.RaycastModule)
+
 local function getClosestPlayer()
     local closest, closestDistance = nil, math.huge
+
     for _, plr in pairs(players:GetPlayers()) do
-        if plr == localPlayer or (plr.Team == localPlayer.Team and localPlayer.Team ~= nil) or isAdmin(plr) then continue end
+        if plr == localPlayer or (plr.Team == localPlayer.Team and localPlayer.Team ~= nil) or isAdmin(plr) then
+            continue
+        end
+
         local character = plr.Character
         if not character then continue end
+
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         if not rootPart then continue end
+
         local screenPosition, onScreen = currentCamera:WorldToViewportPoint(rootPart.Position)
         if not onScreen then continue end
+
         local screenDistance = (Vector2.new(screenPosition.X, screenPosition.Y) - currentCamera.ViewportSize * 0.5).Magnitude
+
         if screenPosition.Z > 0 and screenDistance < getgenv().FOV and screenDistance < closestDistance then
             closest = character
             closestDistance = screenDistance
         end
     end
+
     return closest
 end
 
@@ -334,20 +285,22 @@ for i, func in pairs(raycastModule) do
     if type(func) == "function" then
         raycastModule[i] = function(...)
             if not getgenv().Enabled then return func(...) end
+
             local closestPlayer = getClosestPlayer()
             if not closestPlayer then return func(...) end
+
             return closestPlayer.Head, closestPlayer.Head.Position, Vector3.zero
         end
     end
 end
 
 -- Auto-refresh ESP on join/leave
-players.PlayerAdded:Connect(function(plr)
+players.PlayerAdded:Connect(function()
     task.wait(1)
     refreshESP()
 end)
 
-players.PlayerRemoving:Connect(function(plr)
+players.PlayerRemoving:Connect(function()
     task.wait(0.5)
     refreshESP()
 end)
