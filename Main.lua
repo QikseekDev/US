@@ -49,7 +49,9 @@ Frame.Draggable = true
 Frame.BorderSizePixel = 0
 Frame.BackgroundTransparency = 1
 
-local FadeIn = tweenService:Create(Frame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+local FadeIn = tweenService:Create(Frame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0
+})
 FadeIn:Play()
 
 local FrameCorner = Instance.new("UICorner", Frame)
@@ -126,7 +128,7 @@ KeybindsLabel.Font = Enum.Font.Gotham
 KeybindsLabel.TextSize = 12
 KeybindsLabel.TextXAlignment = Enum.TextXAlignment.Right
 
--- ESP System
+-- ESP SYSTEM
 local espEnabled = false
 local espObjects = {}
 local espRenderConn = nil
@@ -218,11 +220,12 @@ local function updateESP()
     end
 end
 
--- ESP enable/disable
+-- ESP toggle
 local function enableESP()
     espEnabled = true
     espButton.Text = "ESP: true"
     refreshESP()
+
     if espRenderConn then espRenderConn:Disconnect() end
     espRenderConn = runService.RenderStepped:Connect(function()
         if espEnabled then updateESP() end
@@ -240,6 +243,7 @@ espButton.MouseButton1Click:Connect(function()
     if espEnabled then disableESP() else enableESP() end
 end)
 
+-- Keybinds
 userInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.Q then
@@ -250,7 +254,7 @@ userInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- Silent Aim Hook (ignore admins)
+-- Silent Aim Hook
 local raycastModule = require(replicatedStorage.Events.Modules.RaycastModule)
 
 local function getClosestPlayer()
@@ -294,7 +298,7 @@ for i, func in pairs(raycastModule) do
     end
 end
 
--- Auto-refresh ESP on join/leave
+-- Auto refresh
 players.PlayerAdded:Connect(function()
     task.wait(1)
     refreshESP()
