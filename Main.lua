@@ -26,7 +26,7 @@ runService.RenderStepped:Connect(function()
 end)
 
 -- GUI
-local frameHeight = 150
+local frameHeight = 200
 
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "SilentAim_ESP_UI"
@@ -108,12 +108,75 @@ espButton.Text = "ESP: false"
 local espCorner = Instance.new("UICorner", espButton)
 espCorner.CornerRadius = UDim.new(0, 8)
 
+-- Noclip Toggle
+local noclipEnabled = false
+local noclipConnection = nil
+local originalCollision = {}
+
+local noclipButton = Instance.new("TextButton", Frame)
+noclipButton.Size = UDim2.new(1, -20, 0, 36)
+noclipButton.Position = UDim2.new(0, 10, 0, 140)
+noclipButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+noclipButton.TextColor3 = Color3.new(1, 1, 1)
+noclipButton.Font = Enum.Font.GothamBold
+noclipButton.TextSize = 16
+noclipButton.Text = "Noclip: false"
+
+local noclipCorner = Instance.new("UICorner", noclipButton)
+noclipCorner.CornerRadius = UDim.new(0, 8)
+
+local function setNoclip(enabled)
+    noclipEnabled = enabled
+    noclipButton.Text = "Noclip: " .. tostring(noclipEnabled)
+
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+
+    if noclipEnabled then
+        noclipConnection = runService.Stepped:Connect(function()
+            local character = localPlayer.Character
+            if not character then return end
+
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    if originalCollision[part] == nil then
+                        originalCollision[part] = part.CanCollide
+                    end
+                    part.CanCollide = false
+                end
+            end
+        end)
+    else
+        for part, originalValue in pairs(originalCollision) do
+            if part and part.Parent then
+                part.CanCollide = originalValue
+            end
+            originalCollision[part] = nil
+        end
+    end
+end
+
+noclipButton.MouseButton1Click:Connect(function()
+    setNoclip(not noclipEnabled)
+end)
+
+localPlayer.CharacterAdded:Connect(function()
+    if noclipEnabled then
+        task.wait(0.2)
+        if noclipEnabled then
+            setNoclip(true)
+        end
+    end
+end)
+
 -- Keybinds
 local KeybindsLabel = Instance.new("TextLabel", Frame)
 KeybindsLabel.Size = UDim2.new(1, -10, 0, 18)
 KeybindsLabel.Position = UDim2.new(0, 5, 1, -22)
 KeybindsLabel.BackgroundTransparency = 1
-KeybindsLabel.Text = "Q – SilentAim | E – ESP"
+KeybindsLabel.Text = "Q – SilentAim | E – ESP | N – Noclip"
 KeybindsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
 KeybindsLabel.Font = Enum.Font.Gotham
 KeybindsLabel.TextSize = 12
@@ -238,6 +301,8 @@ userInputService.InputBegan:Connect(function(input, processed)
         Toggle.Text = "SilentAim: " .. tostring(getgenv().Enabled)
     elseif input.KeyCode == Enum.KeyCode.E then
         if espEnabled then disableESP() else enableESP() end
+    elseif input.KeyCode == Enum.KeyCode.N then
+        setNoclip(not noclipEnabled)
     end
 end)
 
