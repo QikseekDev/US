@@ -48,6 +48,37 @@ FadeIn:Play()
 local FrameCorner = Instance.new("UICorner", Frame)
 FrameCorner.CornerRadius = UDim.new(0, 12)
 
+-- Collapse / Expand Button
+local collapsed = false
+
+local CollapseButton = Instance.new("TextButton", Frame)
+CollapseButton.Size = UDim2.new(0, 28, 0, 26)
+CollapseButton.Position = UDim2.new(1, -32, 0, 3)
+CollapseButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+CollapseButton.TextColor3 = Color3.new(1, 1, 1)
+CollapseButton.Font = Enum.Font.GothamBold
+CollapseButton.TextSize = 18
+CollapseButton.Text = "−"
+CollapseButton.BorderSizePixel = 0
+CollapseButton.ZIndex = 2
+
+local CollapseCorner = Instance.new("UICorner", CollapseButton)
+CollapseCorner.CornerRadius = UDim.new(0, 6)
+
+CollapseButton.MouseButton1Click:Connect(function()
+    collapsed = not collapsed
+
+    for _, child in ipairs(Frame:GetChildren()) do
+        if child:IsA("GuiObject") and child ~= CollapseButton then
+            child.Visible = not collapsed
+        end
+    end
+
+    CollapseButton.Visible = true
+    CollapseButton.Text = collapsed and "+" or "−"
+    Frame.Size = UDim2.new(0, 180, 0, collapsed and 32 or frameHeight)
+end)
+
 -- Silent Aim Toggle
 local Toggle = Instance.new("TextButton", Frame)
 Toggle.Size = UDim2.new(1, -20, 0, 36)
