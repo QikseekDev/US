@@ -19,10 +19,30 @@ fovCircle.Transparency = 1
 fovCircle.Filled = false
 fovCircle.NumSides = 100
 
-runService.RenderStepped:Connect(function()
+local lastMousePos = userInputService:GetMouseLocation()
+local mouseSpeed = 0
+local currentRadius = getgenv().FOV
+local playerBulge = 0
+
+runService.RenderStepped:Connect(function(dt)
     fovCircle.Position = currentCamera.ViewportSize * 0.5
-    fovCircle.Radius = getgenv().FOV
     fovCircle.Visible = getgenv().Enabled
+
+    local character = localPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local velocity = rootPart and rootPart.AssemblyLinearVelocity.Magnitude or 0
+    mouseSpeed = mouseSpeed * 0.85 + velocity * 0.15
+
+    local speedBulge = math.clamp(mouseSpeed * 1.2, 0, 20)
+
+    local closest = getClosestPlayer()
+    local targetBulge = closest and 0 or 12
+    playerBulge = playerBulge + (targetBulge - playerBulge) * (1 - math.exp(-dt * 6))
+
+    local targetRadius = getgenv().FOV + speedBulge + playerBulge
+    currentRadius = currentRadius + (targetRadius - currentRadius) * (1 - math.exp(-dt * 10))
+
+    fovCircle.Radius = currentRadius
 end)
 
 -- GUI
