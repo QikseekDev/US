@@ -9,15 +9,6 @@ local tweenService = game:GetService("TweenService")
 local localPlayer = players.LocalPlayer
 local currentCamera = workspace.CurrentCamera
 
--- Admin / Owner list
-local Admins = {
-    ["1x1x1x1sReturnCame"] = true,
-}
-
-local function isAdmin(plr)
-    return Admins[plr.Name] or Admins[plr.UserId]
-end
-
 -- FOV Circle
 local fovCircle = Drawing.new("Circle")
 fovCircle.Position = currentCamera.ViewportSize * 0.5
@@ -138,17 +129,13 @@ local function applyESP(character, plr)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     if espObjects[character] then return end
 
-    local isOwner = plr.Name == "borec_1211"
     local teamColor = (plr.Team and plr.TeamColor.Color) or Color3.fromRGB(255, 255, 255)
 
-    local highlight
-    if not isOwner then
-        highlight = Instance.new("Highlight")
-        highlight.Parent = character
-        highlight.FillTransparency = 1
-        highlight.OutlineTransparency = 0
-        highlight.OutlineColor = teamColor
-    end
+    local highlight = Instance.new("Highlight")
+    highlight.Parent = character
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = teamColor
 
     local billboard = Instance.new("BillboardGui")
     billboard.Parent = character
@@ -261,7 +248,7 @@ local function getClosestPlayer()
     local closest, closestDistance = nil, math.huge
 
     for _, plr in pairs(players:GetPlayers()) do
-        if plr == localPlayer or (plr.Team == localPlayer.Team and localPlayer.Team ~= nil) or isAdmin(plr) then
+        if plr == localPlayer or (plr.Team == localPlayer.Team and localPlayer.Team ~= nil) then
             continue
         end
 
